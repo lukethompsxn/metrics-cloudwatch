@@ -194,7 +194,7 @@ public class CloudWatchReporter extends ScheduledReporter {
 
     /**
      * This filter is applied right before submission to CloudWatch. This filter can access decoded metric name elements
-     * such as {@link MetricDatum#getDimensions()}.
+     * such as {@link MetricDatum#dimensions()}.
      * <p>
      * Different from {@link MetricFilter} in that
      * MetricFilter must operate on the encoded, single-string name (see {@link MetricFilter#matches(String, Metric)}),
@@ -392,7 +392,7 @@ public class CloudWatchReporter extends ScheduledReporter {
 
     /**
      * This filter is applied right before submission to CloudWatch. This filter can access decoded metric name elements
-     * such as {@link MetricDatum#getDimensions()}.
+     * such as {@link MetricDatum#dimensions()}.
      * <p>
      * Different from {@link MetricFilter} in that
      * MetricFilter must operate on the encoded, single-string name (see {@link MetricFilter#matches(String, Metric)}),
