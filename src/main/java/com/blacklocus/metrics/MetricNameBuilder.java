@@ -15,7 +15,7 @@
  */
 package com.blacklocus.metrics;
 
-import com.amazonaws.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Iterables;
 
@@ -122,7 +122,7 @@ public class MetricNameBuilder {
      * @throws MetricsNameSyntaxException on validation failure
      */
     public MetricNameBuilder addDimension(Dimension dimension, boolean permute) throws MetricsNameSyntaxException {
-        return addDimension(dimension.getName(), dimension.getValue(), false);
+        return addDimension(dimension.name(), dimension.value(), false);
     }
 
     /**

@@ -15,11 +15,12 @@
  */
 package com.blacklocus.metrics;
 
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchAsync;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
-import com.amazonaws.services.cloudwatch.model.PutMetricDataRequest;
-import com.amazonaws.services.cloudwatch.model.StandardUnit;
-import com.amazonaws.services.cloudwatch.model.StatisticSet;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.PutMetricDataRequest;
+import software.amazon.awssdk.services.cloudwatch.model.StandardUnit;
+import software.amazon.awssdk.services.cloudwatch.model.StatisticSet;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Counting;
 import com.codahale.metrics.Gauge;
@@ -171,7 +172,7 @@ public class CloudWatchReporter extends ScheduledReporter {
      */
     private final String metricNamespace;
 
-    private final AmazonCloudWatchAsync cloudWatch;
+    private final CloudWatchAsyncClient cloudWatch;
 
     /**
      * We only submit the difference in counters since the last submission. This way we don't have to reset the counters
@@ -226,7 +227,7 @@ public class CloudWatchReporter extends ScheduledReporter {
      * @param registry   the {@link MetricRegistry} containing the metrics this reporter will report
      * @param cloudWatch client
      */
-    public CloudWatchReporter(MetricRegistry registry, AmazonCloudWatchAsync cloudWatch) {
+    public CloudWatchReporter(MetricRegistry registry, CloudWatchAsyncClient cloudWatch) {
         this(registry, null, cloudWatch);
     }
 
@@ -241,7 +242,7 @@ public class CloudWatchReporter extends ScheduledReporter {
      */
     public CloudWatchReporter(MetricRegistry registry,
                               String metricNamespace,
-                              AmazonCloudWatchAsync cloudWatch) {
+                              CloudWatchAsyncClient cloudWatch) {
         this(registry, metricNamespace, MetricFilter.ALL, cloudWatch);
     }
 
@@ -258,7 +259,7 @@ public class CloudWatchReporter extends ScheduledReporter {
     public CloudWatchReporter(MetricRegistry registry,
                               String metricNamespace,
                               MetricFilter metricFilter,
-                              AmazonCloudWatchAsync cloudWatch) {
+                              CloudWatchAsyncClient cloudWatch) {
 
         super(registry, "CloudWatchReporter:" + metricNamespace, metricFilter, TimeUnit.MINUTES, TimeUnit.MINUTES);
 
@@ -447,20 +448,22 @@ public class CloudWatchReporter extends ScheduledReporter {
                 public boolean apply(MetricDatum input) {
                     if (input == null) {
                         return false;
-                    } else if (input.getStatisticValues() != null) {
+                    } else if (input.statisticValues() != null) {
                         // CloudWatch rejects any Statistic Sets with sample count == 0, which it probably should reject.
-                        return input.getStatisticValues().getSampleCount() > 0;
+                        return input.statisticValues().sampleCount() > 0;
                     }
                     return true;
                 }
             });
 
-            // Whether to use local "now" (true, new Date()) or cloudwatch service "now" (false, leave null).
+            // Whether to use local "now" (true, Instant.now()) or cloudwatch service "now" (false, leave null).
             if (timestampLocal) {
-                Date now = new Date();
+                java.time.Instant now = java.time.Instant.now();
+                List<MetricDatum> timestampedData = new ArrayList<>();
                 for (MetricDatum datum : nonEmptyData) {
-                    datum.withTimestamp(now);
+                    timestampedData.add(datum.toBuilder().timestamp(now).build());
                 }
+                nonEmptyData = timestampedData;
             }
 
             // Finally, apply any user-level filter.
@@ -472,9 +475,10 @@ public class CloudWatchReporter extends ScheduledReporter {
 
             // Submit asynchronously with threads.
             for (List<MetricDatum> dataSubset : dataPartitions) {
-                cloudWatchFutures.add(cloudWatch.putMetricDataAsync(new PutMetricDataRequest()
-                        .withNamespace(metricNamespace)
-                        .withMetricData(dataSubset)));
+                cloudWatchFutures.add(cloudWatch.putMetricData(PutMetricDataRequest.builder()
+                        .namespace(metricNamespace)
+                        .metricData(dataSubset)
+                        .build()));
             }
 
             // Wait for CloudWatch putMetricData futures to be fulfilled.
@@ -514,7 +518,7 @@ public class CloudWatchReporter extends ScheduledReporter {
             Iterables.addAll(data, key.newDatums(typeDimName, typeDimValue, new Function<MetricDatum, MetricDatum>() {
                 @Override
                 public MetricDatum apply(MetricDatum datum) {
-                    return datum.withValue(value.doubleValue());
+                    return datum.toBuilder().value(value.doubleValue()).build();
                 }
             }));
         }
@@ -533,7 +537,7 @@ public class CloudWatchReporter extends ScheduledReporter {
         Iterables.addAll(data, key.newDatums(typeDimName, typeDimValue, new Function<MetricDatum, MetricDatum>() {
             @Override
             public MetricDatum apply(MetricDatum datum) {
-                return datum.withValue((double) diff).withUnit(StandardUnit.Count);
+                return datum.toBuilder().value((double) diff).unit(StandardUnit.COUNT).build();
             }
         }));
     }
@@ -545,17 +549,18 @@ public class CloudWatchReporter extends ScheduledReporter {
         Sampling metric = entry.getValue();
         Snapshot snapshot = metric.getSnapshot();
         double scaledSum = sum(snapshot.getValues()) * rescale;
-        final StatisticSet statisticSet = new StatisticSet()
-                .withSum(scaledSum)
-                .withSampleCount((double) snapshot.size())
-                .withMinimum((double) snapshot.getMin() * rescale)
-                .withMaximum((double) snapshot.getMax() * rescale);
+        final StatisticSet statisticSet = StatisticSet.builder()
+                .sum(scaledSum)
+                .sampleCount((double) snapshot.size())
+                .minimum((double) snapshot.getMin() * rescale)
+                .maximum((double) snapshot.getMax() * rescale)
+                .build();
 
         DemuxedKey key = new DemuxedKey(appendGlobalDimensions(entry.getKey()));
         Iterables.addAll(data, key.newDatums(typeDimName, typeDimValue, new Function<MetricDatum, MetricDatum>() {
             @Override
             public MetricDatum apply(MetricDatum datum) {
-                return datum.withStatisticValues(statisticSet);
+                return datum.toBuilder().statisticValues(statisticSet).build();
             }
         }));
     }

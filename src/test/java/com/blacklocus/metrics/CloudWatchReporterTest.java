@@ -15,12 +15,12 @@
  */
 package com.blacklocus.metrics;
 
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 public class CloudWatchReporterTest {
 
     @Test
-    @Ignore("ad-hoc usage")
+    @Disabled("ad-hoc usage")
     public void createTestData() throws InterruptedException {
 
         ExecutorService executors = Executors.newCachedThreadPool();
@@ -47,7 +47,7 @@ public class CloudWatchReporterTest {
                 new CloudWatchReporter(
                         metricRegistry,
                         CloudWatchReporterTest.class.getSimpleName(),
-                        new AmazonCloudWatchAsyncClient()
+                        CloudWatchAsyncClient.create()
                 )
                         .withDimensions("unit=test group=first")
                         .start(1, TimeUnit.MINUTES);
@@ -88,7 +88,7 @@ public class CloudWatchReporterTest {
                 new CloudWatchReporter(
                         metricRegistry,
                         CloudWatchReporterTest.class.getSimpleName(),
-                        new AmazonCloudWatchAsyncClient()
+                        CloudWatchAsyncClient.create()
                 )
                         .withDimensions("unit=test group=second")
                         .start(1, TimeUnit.MINUTES);

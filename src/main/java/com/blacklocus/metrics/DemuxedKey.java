@@ -15,8 +15,8 @@
  */
 package com.blacklocus.metrics;
 
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -55,7 +55,7 @@ class DemuxedKey {
 
             if (segment.contains(NAME_DIMENSION_SEPARATOR)) {
                 String[] dimensionParts = segment.split(NAME_DIMENSION_SEPARATOR, 2);
-                Dimension dimension = new Dimension().withName(dimensionParts[0]).withValue(dimensionParts[1]);
+                Dimension dimension = Dimension.builder().name(dimensionParts[0]).value(dimensionParts[1]).build();
                 dimensions = new PermutableChain<Dimension>(dimension, permutable, dimensions);
 
             } else {
@@ -78,7 +78,7 @@ class DemuxedKey {
 
         // All dimension sets include the type dimension.
         PermutableChain<Dimension> withDimensionChain = new PermutableChain<Dimension>(
-                new Dimension().withName(typeName).withValue(typeValue),
+                Dimension.builder().name(typeName).value(typeValue).build(),
                 false,
                 dimensionChain
         );
@@ -94,7 +94,7 @@ class DemuxedKey {
             }
             for (Iterable<Dimension> dimensionSet : withDimensionChain) {
                 data.add(datumSpecification.apply(
-                        new MetricDatum().withMetricName(name).withDimensions(Lists.newArrayList(dimensionSet))
+                        MetricDatum.builder().metricName(name).dimensions(Lists.newArrayList(dimensionSet)).build()
                 ));
             }
         }

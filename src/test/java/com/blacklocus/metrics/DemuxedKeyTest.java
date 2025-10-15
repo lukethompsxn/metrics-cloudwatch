@@ -15,14 +15,14 @@
  */
 package com.blacklocus.metrics;
 
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.HashSet;
 import java.util.List;
@@ -41,29 +41,29 @@ public class DemuxedKeyTest {
         List<MetricDatum> data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "test", new Function<MetricDatum, MetricDatum>() {
             @Override
             public MetricDatum apply(MetricDatum datum) {
-                return datum.withValue(3.5);
+                return datum.toBuilder().value(3.5).build();
             }
         }));
-        Assert.assertEquals(1, data.size());
+        assertEquals(1, data.size());
     }
 
     @Test
     public void testMultiName() {
         DemuxedKey key = new DemuxedKey("TokenOne Two");
         List<MetricDatum> data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "test", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(1, data.size());
+        assertEquals(1, data.size());
     }
 
     @Test
     public void testDefaultDimension() {
         DemuxedKey key = new DemuxedKey("wheee");
         List<MetricDatum> data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "test", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(1, data.size());
+        assertEquals(1, data.size());
         MetricDatum metricDatum = data.get(0);
-        Assert.assertEquals(1, metricDatum.getDimensions().size());
-        Dimension dimension = metricDatum.getDimensions().get(0);
-        Assert.assertEquals(DEF_DIM_NAME_TYPE, dimension.getName());
-        Assert.assertEquals("test", dimension.getValue());
+        assertEquals(1, metricDatum.dimensions().size());
+        Dimension dimension = metricDatum.dimensions().get(0);
+        assertEquals(DEF_DIM_NAME_TYPE, dimension.name());
+        assertEquals("test", dimension.value());
     }
 
     @Test
@@ -71,11 +71,11 @@ public class DemuxedKeyTest {
     public void testMultiDimension() {
         DemuxedKey key = new DemuxedKey("wheee color=orange token animal=okapi");
         List<MetricDatum> data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "test", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(1, data.size());
+        assertEquals(1, data.size());
         MetricDatum metricDatum = data.get(0);
-        Assert.assertEquals("wheee token", metricDatum.getMetricName());
-        Assert.assertEquals(3, metricDatum.getDimensions().size());
-        Assert.assertTrue(containsExactly(data, d(DEF_DIM_NAME_TYPE, "test", "color", "orange", "animal", "okapi")));
+        assertEquals("wheee token", metricDatum.metricName());
+        assertEquals(3, metricDatum.dimensions().size());
+        assertTrue(containsExactly(data, d(DEF_DIM_NAME_TYPE, "test", "color", "orange", "animal", "okapi")));
     }
 
     @Test
@@ -83,9 +83,9 @@ public class DemuxedKeyTest {
     public void testMixedNameAndDimensionPerm() {
         DemuxedKey key = new DemuxedKey("wheee* color=orange* token animal=okapi");
         List<MetricDatum> data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "pickle", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(4, data.size());
-        Assert.assertTrue(containsExactly(data, "token", "wheee token"));
-        Assert.assertTrue(containsExactly(data,
+        assertEquals(4, data.size());
+        assertTrue(containsExactly(data, "token", "wheee token"));
+        assertTrue(containsExactly(data,
                 d(DEF_DIM_NAME_TYPE, "pickle", "animal", "okapi"),
                 d(DEF_DIM_NAME_TYPE, "pickle", "animal", "okapi", "color", "orange")));
     }
@@ -94,29 +94,29 @@ public class DemuxedKeyTest {
     public void testMultiPermName() {
         DemuxedKey key = new DemuxedKey("One*");
         List<MetricDatum> data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "test", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(1, data.size());
-        Assert.assertTrue(containsExactly(data, "One"));
+        assertEquals(1, data.size());
+        assertTrue(containsExactly(data, "One"));
 
         key = new DemuxedKey("Two option*");
         data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "test", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(2, data.size());
+        assertEquals(2, data.size());
         // Note that token order must be maintained
-        Assert.assertTrue(containsExactly(data, "Two", "Two option"));
+        assertTrue(containsExactly(data, "Two", "Two option"));
 
         key = new DemuxedKey("Three double* option*");
         data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "test", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(4, data.size());
-        Assert.assertTrue(containsExactly(data, "Three", "Three double", "Three option", "Three double option"));
+        assertEquals(4, data.size());
+        assertTrue(containsExactly(data, "Three", "Three double", "Three option", "Three double option"));
 
         key = new DemuxedKey("All* keys* optional*");
         data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "test", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(7, data.size());
-        Assert.assertTrue(containsExactly(data, "All", "keys", "optional", "All keys", "keys optional", "All optional", "All keys optional"));
+        assertEquals(7, data.size());
+        assertTrue(containsExactly(data, "All", "keys", "optional", "All keys", "keys optional", "All optional", "All keys optional"));
 
         key = new DemuxedKey("Tail* required");
         data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "test", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(2, data.size());
-        Assert.assertTrue(containsExactly(data, "Tail required", "required"));
+        assertEquals(2, data.size());
+        assertTrue(containsExactly(data, "Tail required", "required"));
     }
 
     @Test
@@ -124,9 +124,9 @@ public class DemuxedKeyTest {
     public void testMultiPermDimensions() {
         DemuxedKey key = new DemuxedKey("Name key=value* color=green* machine=localhost");
         List<MetricDatum> data = Lists.newArrayList(key.newDatums(DEF_DIM_NAME_TYPE, "testMultiPermDimensions", Functions.<MetricDatum>identity()));
-        Assert.assertEquals(4, data.size());
-        Assert.assertTrue(containsExactly(data, "Name"));
-        Assert.assertTrue(containsExactly(data,
+        assertEquals(4, data.size());
+        assertTrue(containsExactly(data, "Name"));
+        assertTrue(containsExactly(data,
                 d(DEF_DIM_NAME_TYPE, "testMultiPermDimensions", "machine", "localhost"),
                 d(DEF_DIM_NAME_TYPE, "testMultiPermDimensions", "key", "value", "machine", "localhost"),
                 d(DEF_DIM_NAME_TYPE, "testMultiPermDimensions", "color", "green", "machine", "localhost"),
@@ -138,7 +138,7 @@ public class DemuxedKeyTest {
         return Sets.symmetricDifference(Sets.newHashSet(Lists.transform(data, new Function<MetricDatum, String>() {
             @Override
             public String apply(MetricDatum input) {
-                return input.getMetricName();
+                return input.metricName();
             }
         })), Sets.newHashSet(names)).isEmpty();
     }
@@ -147,7 +147,7 @@ public class DemuxedKeyTest {
         return Sets.newHashSet(Lists.transform(data, new Function<MetricDatum, Set<Dimension>>() {
             @Override
             public Set<Dimension> apply(MetricDatum input) {
-                return Sets.newHashSet(input.getDimensions());
+                return Sets.newHashSet(input.dimensions());
             }
         })).equals(Sets.newHashSet(dimensions));
     }
@@ -155,7 +155,7 @@ public class DemuxedKeyTest {
     Set<Dimension> d(String... keyValuePairs) {
         Set<Dimension> dimensions = new HashSet<Dimension>(keyValuePairs.length / 2);
         for (int i = 0; i < keyValuePairs.length; i += 2) {
-            dimensions.add(new Dimension().withName(keyValuePairs[i]).withValue(keyValuePairs[i + 1]));
+            dimensions.add(Dimension.builder().name(keyValuePairs[i]).value(keyValuePairs[i + 1]).build());
         }
         return dimensions;
     }

@@ -15,8 +15,8 @@
  */
 package com.blacklocus.metrics;
 
-import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.cloudwatch.model.StatisticSet;
+import software.amazon.awssdk.services.cloudwatch.model.Dimension;
+import software.amazon.awssdk.services.cloudwatch.model.StatisticSet;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Counting;
 import com.codahale.metrics.Histogram;

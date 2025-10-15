@@ -15,9 +15,8 @@
  */
 package com.blacklocus.metrics;
 
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchAsync;
-import com.amazonaws.services.cloudwatch.AmazonCloudWatchAsyncClient;
-import com.amazonaws.services.cloudwatch.model.MetricDatum;
+import software.amazon.awssdk.services.cloudwatch.CloudWatchAsyncClient;
+import software.amazon.awssdk.services.cloudwatch.model.MetricDatum;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
@@ -47,7 +46,7 @@ public class CloudWatchReporterBuilder {
 
     private MetricRegistry registry;
     private String namespace;
-    private AmazonCloudWatchAsync client;
+    private CloudWatchAsyncClient client;
     private MetricFilter filter;
     private String dimensions;
     private Boolean timestampLocal;
@@ -85,7 +84,7 @@ public class CloudWatchReporterBuilder {
      * @param client CloudWatch client
      * @return this (for chaining)
      */
-    public CloudWatchReporterBuilder withClient(AmazonCloudWatchAsync client) {
+    public CloudWatchReporterBuilder withClient(CloudWatchAsyncClient client) {
         this.client = client;
         return this;
     }
@@ -263,7 +262,7 @@ public class CloudWatchReporterBuilder {
 
         MetricRegistry resolvedRegistry = null != registry ? registry : new MetricRegistry();
         MetricFilter resolvedFilter = null != filter ? filter : MetricFilter.ALL;
-        AmazonCloudWatchAsync resolvedCloudWatchClient = null != client ? client : new AmazonCloudWatchAsyncClient();
+        CloudWatchAsyncClient resolvedCloudWatchClient = null != client ? client : CloudWatchAsyncClient.create();
         String resolvedDimensions = null != dimensions ? dimensions : null;
         Boolean resolvedTimestampLocal = null != timestampLocal ? timestampLocal : false;
 
