@@ -1,9 +1,10 @@
 CloudWatch integration for codahale metrics
 ===========================================
+---
 
-This fork of metrics-cloudwatch utilizes AWS SDK v2.
+This fork of metrics-cloudwatch utilizes AWS SDK v2. Below is from the original README.
 
-===========================================
+----------
 
 This is a metrics reporter implementation
 ([codahale/metrics/ScheduledReporter.java](https://github.com/codahale/metrics/blob/master/metrics-core/src/main/java/com/codahale/metrics/ScheduledReporter.java))
